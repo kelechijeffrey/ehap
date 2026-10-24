@@ -5,7 +5,6 @@ import {
   AlertTriangle,
   Bell,
   Settings,
-  History,
   Flame,
   Award,
   Volume2,
@@ -13,12 +12,15 @@ import {
   Play,
   Pause,
   RotateCcw,
-  Plus,
-  CheckCircle2,
-  MapPin,
-  RefreshCw,
   ShieldAlert,
   Activity,
+  GlassWater,
+  Package,
+  Container,
+  Crown,
+  ExternalLink,
+  CheckCircle2,
+  RefreshCw,
 } from "lucide-react";
 
 export default function App() {
@@ -38,6 +40,7 @@ export default function App() {
     () => Number(localStorage.getItem("ehap_streak")) || 1,
   );
   const [soundEnabled, setSoundEnabled] = useState(true);
+  const [customAmount, setCustomAmount] = useState("");
 
   // Weather & Heat State
   const [weather, setWeather] = useState({
@@ -94,7 +97,7 @@ export default function App() {
         osc.stop(ctx.currentTime + 0.4);
       }
     } catch (e) {
-      console.log("Audio not allowed yet");
+      console.log("Audio Context restricted");
     }
   };
 
@@ -107,14 +110,14 @@ export default function App() {
       setTimerActive(false);
       playChime("alert");
       if (Notification.permission === "granted") {
-        new Notification("EHAP Hydration Alert", {
-          body: "Time to drink water and stay cool under El Niño heat conditions!",
+        new Notification("EHAP Hydration Alert! 💧", {
+          body: `Keep your ${streak}-day streak alive! Drink a sachet or bottle of water to beat the heat!`,
           icon: "/favicon.ico",
         });
       }
     }
     return () => clearInterval(interval);
-  }, [timerActive, timeLeft]);
+  }, [timerActive, timeLeft, streak]);
 
   // Calculate Today's Total Intake
   const todayStr = new Date().toISOString().split("T")[0];
@@ -138,8 +141,7 @@ export default function App() {
       0.00122874 * tempF * tempF * humidity +
       0.00085282 * tempF * humidity * humidity -
       0.00000199 * tempF * tempF * humidity * humidity;
-    const hiC = ((hiF - 32) * 5) / 9;
-    return Math.round(hiC);
+    return Math.round(((hiF - 32) * 5) / 9);
   };
 
   const heatIndex = calculateHeatIndex(weather.temp, weather.humidity);
@@ -149,24 +151,20 @@ export default function App() {
       return {
         label: "Extreme Danger",
         color: "bg-red-950 text-red-400 border-red-800",
-        level: 4,
       };
     if (hi >= 41)
       return {
         label: "Danger",
         color: "bg-orange-950 text-orange-400 border-orange-800",
-        level: 3,
       };
     if (hi >= 32)
       return {
         label: "Extreme Caution",
         color: "bg-amber-950 text-amber-400 border-amber-800",
-        level: 2,
       };
     return {
       label: "Caution",
       color: "bg-blue-950 text-blue-400 border-blue-800",
-      level: 1,
     };
   };
 
@@ -216,10 +214,11 @@ export default function App() {
     );
   };
 
-  const addWater = (amount) => {
+  const addWater = (amount, itemName) => {
     const newLog = {
       id: Date.now(),
       amount,
+      name: itemName,
       time: new Date().toLocaleTimeString([], {
         hour: "2-digit",
         minute: "2-digit",
@@ -230,9 +229,41 @@ export default function App() {
     playChime("water");
   };
 
+  // Everyday Drinking Container Options
+  const drinkPresets = [
+    {
+      label: "Glass / Cup",
+      amount: 250,
+      sub: "1 Glass",
+      icon: GlassWater,
+      color: "text-cyan-400",
+    },
+    {
+      label: "Pure Water",
+      amount: 500,
+      sub: "1 Sachet",
+      icon: Package,
+      color: "text-blue-400",
+    },
+    {
+      label: "Small Bottle",
+      amount: 600,
+      sub: "60cl Bottle",
+      icon: Droplet,
+      color: "text-teal-400",
+    },
+    {
+      label: "Big Bottle",
+      amount: 1500,
+      sub: "1.5L Bottle",
+      icon: Container,
+      color: "text-indigo-400",
+    },
+  ];
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans max-w-md mx-auto shadow-2xl border-x border-slate-800">
-      {/* Header Bar */}
+      {/* App Header */}
       <header className="p-4 bg-slate-900/80 backdrop-blur-md sticky top-0 z-50 border-b border-slate-800 flex justify-between items-center">
         <div className="flex items-center space-x-3">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
@@ -260,11 +291,11 @@ export default function App() {
       </header>
 
       {/* Main Container */}
-      <main className="flex-1 p-4 space-y-5 overflow-y-auto pb-24">
+      <main className="flex-1 p-4 space-y-4 overflow-y-auto pb-24">
         {/* DASHBOARD TAB */}
         {activeTab === "dashboard" && (
           <>
-            {/* Heat Risk Banner */}
+            {/* Heat Index Triage Card */}
             <div
               className={`p-4 rounded-2xl border ${risk.color} flex justify-between items-center shadow-lg`}
             >
@@ -299,10 +330,8 @@ export default function App() {
               </div>
             </div>
 
-            {/* Main Progress Circular Ring Card */}
+            {/* Main Visual Progress Card */}
             <div className="p-6 rounded-3xl bg-slate-900 border border-slate-800 shadow-xl flex flex-col items-center justify-center relative overflow-hidden">
-              <div className="absolute -top-10 -right-10 w-32 h-32 bg-cyan-500/10 rounded-full blur-2xl"></div>
-
               <div className="relative w-44 h-44 flex items-center justify-center">
                 <svg className="w-full h-full transform -rotate-90">
                   <circle
@@ -332,32 +361,49 @@ export default function App() {
                     {currentIntake}
                   </span>
                   <span className="text-xs text-slate-400 block">
-                    / {dailyGoal} mL
+                    / {dailyGoal} mL Goal
                   </span>
                   <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-cyan-950 text-cyan-300 border border-cyan-800">
-                    {progressPercent}%
+                    {progressPercent}% Complete
                   </span>
                 </div>
               </div>
 
-              {/* Quick Log Action Buttons */}
-              <div className="grid grid-cols-4 gap-2 w-full mt-6">
-                {[150, 250, 500, 750].map((amt) => (
-                  <button
-                    key={amt}
-                    onClick={() => addWater(amt)}
-                    className="py-2.5 bg-slate-800 hover:bg-cyan-600 hover:text-white text-slate-200 text-xs font-bold rounded-xl transition border border-slate-700 flex flex-col items-center space-y-0.5 active:scale-95"
-                  >
-                    <span>+{amt}</span>
-                    <span className="text-[9px] text-slate-400 font-normal">
-                      mL
-                    </span>
-                  </button>
-                ))}
+              {/* Intuitive Everyday Drinking Presets */}
+              <div className="w-full mt-6 space-y-2">
+                <div className="text-xs font-bold text-slate-400 text-left">
+                  Quick Log What You Drank:
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  {drinkPresets.map((item, idx) => {
+                    const IconComp = item.icon;
+                    return (
+                      <button
+                        key={idx}
+                        onClick={() => addWater(item.amount, item.label)}
+                        className="p-3 bg-slate-800 hover:bg-slate-750 border border-slate-700 hover:border-cyan-500 rounded-2xl flex items-center space-x-3 transition text-left active:scale-95"
+                      >
+                        <div
+                          className={`p-2 bg-slate-900 rounded-xl ${item.color}`}
+                        >
+                          <IconComp className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <div className="text-xs font-bold text-white">
+                            {item.label}
+                          </div>
+                          <div className="text-[10px] text-slate-400">
+                            {item.sub} (+{item.amount}mL)
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
 
-            {/* Streak & Stats */}
+            {/* Streak & Stats Summary */}
             <div className="grid grid-cols-2 gap-3">
               <div className="p-4 bg-slate-900 border border-slate-800 rounded-2xl flex items-center space-x-3">
                 <div className="p-3 bg-amber-500/10 text-amber-400 rounded-xl">
@@ -365,7 +411,7 @@ export default function App() {
                 </div>
                 <div>
                   <div className="text-xs text-slate-400">Daily Streak</div>
-                  <div className="text-lg font-bold">{streak} Days</div>
+                  <div className="text-lg font-bold">{streak} Days 🔥</div>
                 </div>
               </div>
 
@@ -374,13 +420,18 @@ export default function App() {
                   <Activity className="w-6 h-6" />
                 </div>
                 <div>
-                  <div className="text-xs text-slate-400">Status</div>
+                  <div className="text-xs text-slate-400">Hydration Status</div>
                   <div className="text-xs font-bold text-cyan-400">
-                    {progressPercent >= 100 ? "Hydrated!" : "Drinking Required"}
+                    {progressPercent >= 100
+                      ? "Fully Hydrated!"
+                      : "Sip More Water"}
                   </div>
                 </div>
               </div>
             </div>
+
+        
+         
           </>
         )}
 
@@ -448,7 +499,7 @@ export default function App() {
               <div>
                 <h3 className="text-sm font-bold">Push Notifications</h3>
                 <p className="text-xs text-slate-400">
-                  Receive alerts even when screen is idle
+                  Get alerts to save your {streak}-day streak!
                 </p>
               </div>
               <button
@@ -465,27 +516,27 @@ export default function App() {
         {activeTab === "symptoms" && (
           <div className="space-y-3">
             <h2 className="text-md font-bold text-slate-300">
-              Heat-Related Illness Self-Checker
+              Heat-Related Illness Diagnostic
             </h2>
             {[
               {
                 level: "Mild Heat Exhaustion",
                 desc: "Heavy sweating, dizziness, fatigue, fast pulse.",
-                action: "Move to shade, drink small sips of cool water.",
+                action: "Move to shade, sip cool water slowly.",
                 border: "border-amber-800 bg-amber-950/40",
               },
               {
                 level: "Severe Heat Exhaustion",
                 desc: "Nausea, muscle cramps, headache, fainting.",
                 action:
-                  "Loosen tight clothes, apply cold compress, hydrate immediately.",
+                  "Loosen tight clothing, apply cold wet cloths, drink electrolytes/water.",
                 border: "border-orange-800 bg-orange-950/40",
               },
               {
                 level: "Heat Stroke (EMERGENCY)",
-                desc: "High body temp (>103°F), confusion, hot red skin, loss of consciousness.",
+                desc: "Body temp >103°F (39.4°C), confusion, rapid hot red skin, loss of consciousness.",
                 action:
-                  "CALL EMERGENCY SERVICES. Cool body immediately with cold water/ice.",
+                  "CALL EMERGENCY SERVICES IMMEDIATELY. Cool body with ice/cold water.",
                 border: "border-red-800 bg-red-950/60",
               },
             ].map((item, idx) => (
@@ -506,38 +557,55 @@ export default function App() {
           </div>
         )}
 
-        {/* SETTINGS TAB */}
+        {/* SETTINGS & EHAP PRO TAB */}
         {activeTab === "settings" && (
-          <div className="p-4 bg-slate-900 border border-slate-800 rounded-3xl space-y-5">
-            <h2 className="text-md font-bold text-slate-200">
-              Personal Hydration Profile
-            </h2>
+          <div className="space-y-4">
+            <div className="p-4 bg-slate-900 border border-slate-800 rounded-3xl space-y-4">
+              <h2 className="text-md font-bold text-slate-200">
+                Personal Hydration Profile
+              </h2>
 
-            <div className="space-y-2">
-              <label className="text-xs text-slate-400 font-medium">
-                Body Weight: {weight} kg
-              </label>
-              <input
-                type="range"
-                min="30"
-                max="150"
-                value={weight}
-                onChange={(e) => setWeight(Number(e.target.value))}
-                className="w-full accent-cyan-400 bg-slate-800 h-2 rounded-lg cursor-pointer"
-              />
+              <div className="space-y-2">
+                <label className="text-xs text-slate-400 font-medium">
+                  Body Weight: {weight} kg
+                </label>
+                <input
+                  type="range"
+                  min="30"
+                  max="150"
+                  value={weight}
+                  onChange={(e) => setWeight(Number(e.target.value))}
+                  className="w-full accent-cyan-400 bg-slate-800 h-2 rounded-lg cursor-pointer"
+                />
+              </div>
+
+              <div className="p-3 bg-slate-950 rounded-xl border border-slate-800">
+                <div className="text-xs text-slate-400">
+                  Calculated Daily Target
+                </div>
+                <div className="text-xl font-bold text-cyan-400">
+                  {dailyGoal} mL / day
+                </div>
+                <p className="text-[10px] text-slate-500 mt-1">
+                  Equivalent to ~{Math.round(dailyGoal / 500)} Pure Water
+                  Sachets or Bottles daily.
+                </p>
+              </div>
             </div>
 
-            <div className="p-3 bg-slate-950 rounded-xl border border-slate-800">
-              <div className="text-xs text-slate-400">
-                Calculated Baseline Target
+            {/* FREEMIUM / MONETIZATION UPGRADE CARD */}
+            <div className="p-5 bg-gradient-to-br from-amber-950/60 to-slate-900 border border-amber-500/40 rounded-3xl space-y-3">
+              <div className="flex items-center space-x-2 text-amber-400">
+                <Crown className="w-5 h-5" />
+                <span className="font-bold text-sm">Upgrade to EHAP Pro</span>
               </div>
-              <div className="text-xl font-bold text-cyan-400">
-                {dailyGoal} mL / day
-              </div>
-              <p className="text-[10px] text-slate-500 mt-1">
-                *Based on WHO guidelines adjusted for elevated El Niño weather
-                index.
+              <p className="text-xs text-slate-300">
+                Get offline SMS heat alarms for family members, custom reminder
+                sounds, and PDF health export reports.
               </p>
+              <button className="w-full py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-extrabold rounded-xl text-xs hover:brightness-110 transition">
+                Unlock EHAP Pro
+              </button>
             </div>
           </div>
         )}
